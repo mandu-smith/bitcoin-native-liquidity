@@ -160,7 +160,7 @@
 (define-private (update-farm-rewards (pool-id uint))
     (let (
         (farm (unwrap! (map-get? yield-farms { pool-id: pool-id }) ERR-POOL-NOT-FOUND))
-        (blocks-elapsed (- block-height (get last-reward-block farm)))
+        (blocks-elapsed (- stacks-block-height (get last-reward-block farm)))
         (rewards-to-distribute (* blocks-elapsed (get reward-per-block farm)))
     )
     
@@ -170,7 +170,7 @@
             (merge farm {
                 accumulated-reward-per-share: (+ (get accumulated-reward-per-share farm)
                     (/ (* rewards-to-distribute REWARD-MULTIPLIER) (get total-staked farm))),
-                last-reward-block: block-height
+                last-reward-block: stacks-block-height
             })
         )
         true)
@@ -189,7 +189,7 @@
         (merge pool {
             reserve-x: (+ (get reserve-x pool) amount-in),
             reserve-y: (- (get reserve-y pool) amount-out),
-            last-block: block-height
+            last-block: stacks-block-height
         })
     )
     
@@ -220,7 +220,7 @@
     (match (map-get? pools { pool-id: pool-id })
         pool-info 
         (let (
-            (time-elapsed (- block-height (get price-timestamp pool-info)))
+            (time-elapsed (- stacks-block-height (get price-timestamp pool-info)))
         )
         (if (>= time-elapsed ORACLE-VALIDITY-PERIOD)
             (err ERR-ORACLE-STALE)
@@ -252,7 +252,7 @@
         (match (map-get? yield-farms { pool-id: pool-id })
             farm
             (let (
-                (blocks-elapsed (- block-height (get last-stake-block provider-info)))
+                (blocks-elapsed (- stacks-block-height (get last-stake-block provider-info)))
                 (reward-rate (get reward-per-block farm))
                 (stake-amount (get staked-amount provider-info))
                 (total-staked (get total-staked farm))
@@ -300,11 +300,11 @@
             (reserve-y initial-y)
             (total-supply INITIAL-LIQUIDITY-TOKENS)
             (fee-rate u30) ;; 0.3% default fee
-            (last-block block-height)
+            (last-block stacks-block-height)
             (cumulative-fee-x u0)
             (cumulative-fee-y u0)
             (price-cumulative-last u0)
-            (price-timestamp block-height)
+            (price-timestamp stacks-block-height)
             (twap u0)
         )
     )
@@ -316,7 +316,7 @@
             shares: INITIAL-LIQUIDITY-TOKENS,
             rewards-claimed: u0,
             staked-amount: u0,
-            last-stake-block: block-height,
+            last-stake-block: stacks-block-height,
             fee-growth-checkpoint-x: u0,
             fee-growth-checkpoint-y: u0,
             unclaimed-fees-x: u0,
@@ -367,7 +367,7 @@
                 shares: shares-to-mint,
                 rewards-claimed: u0,
                 staked-amount: u0,
-                last-stake-block: block-height,
+                last-stake-block: stacks-block-height,
                 fee-growth-checkpoint-x: u0,
                 fee-growth-checkpoint-y: u0,
                 unclaimed-fees-x: u0,
@@ -403,7 +403,7 @@
         (merge pool {
             reserve-x: (+ (get reserve-x pool) amount-x),
             reserve-y: (- (get reserve-y pool) output-amount),
-            last-block: block-height
+            last-block: stacks-block-height
         })
     )
     
@@ -446,7 +446,7 @@
             {
                 amount: (+ (get amount current-stake) amount),
                 power: (+ (get power current-stake) power),
-                lock-until: (+ block-height lock-blocks),
+                lock-until: (+ stacks-block-height lock-blocks),
                 delegation: (get delegation current-stake)
             }
         )
@@ -495,7 +495,7 @@
             borrower: tx-sender,
             amount: amount-x,
             token: (contract-of token-x),
-            due-block: (+ block-height u1)
+            due-block: (+ stacks-block-height u1)
         }
     )
     
@@ -524,7 +524,7 @@
 (define-public (execute-flash-swap (loan-id uint) (pool-id uint))
     (let ((loan (unwrap! (map-get? flash-loans { loan-id: loan-id }) ERR-POOL-NOT-FOUND)))
         (asserts! (is-eq tx-sender (get borrower loan)) ERR-NOT-AUTHORIZED)
-        (asserts! (<= block-height (get due-block loan)) ERR-EXPIRED)
+        (asserts! (<= stacks-block-height (get due-block loan)) ERR-EXPIRED)
         
         ;; Implementation specific to the callback
         ;; This should be implemented by the contract calling flash-swap
@@ -561,7 +561,7 @@
                 reward-token: reward-token,
                 reward-per-block: reward-rate,
                 total-staked: u0,
-                last-reward-block: block-height,
+                last-reward-block: stacks-block-height,
                 accumulated-reward-per-share: u0
             }
         )
@@ -583,7 +583,7 @@
         { pool-id: pool-id, provider: tx-sender }
         (merge provider-info {
             staked-amount: (+ (get staked-amount provider-info) amount),
-            last-stake-block: block-height
+            last-stake-block: stacks-block-height
         })
     )
     
@@ -603,7 +603,7 @@
 (define-public (update-price-oracle (pool-id uint))
     (let (
         (pool (unwrap! (map-get? pools { pool-id: pool-id }) ERR-POOL-NOT-FOUND))
-        (time-elapsed (- block-height (get price-timestamp pool)))
+        (time-elapsed (- stacks-block-height (get price-timestamp pool)))
         (price-cumulative (* (/ (get reserve-y pool) (get reserve-x pool)) time-elapsed))
     )
     
@@ -611,12 +611,12 @@
         { pool-id: pool-id }
         (merge pool {
             price-cumulative-last: (+ (get price-cumulative-last pool) price-cumulative),
-            price-timestamp: block-height,
+            price-timestamp: stacks-block-height,
             twap: (/ price-cumulative time-elapsed)
         })
     )
     
-    (var-set price-oracle-last-update block-height)
+    (var-set price-oracle-last-update stacks-block-height)
     (ok true))
 )
 
